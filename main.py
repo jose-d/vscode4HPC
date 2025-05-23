@@ -72,12 +72,15 @@ def main():
     # for every job, ensure there is corresponding entry in ~/.ssh/config
 
     ssh_aliases = []
+    global_prefix = "_HPC"
 
     for job in jobs_output:
 
-        print("checking job:", job)
+        print("checking job:", job["JOBID"])
 
         job_name = job["NAME"]
+
+        alias_prefix = f"{global_prefix}_{job['frontend']}"
 
         # extract the job port from the job name (s_32770) and check if it is a number
         if job_name.startswith("s_"):
@@ -85,7 +88,7 @@ def main():
         else:
             continue
 
-        ssh_alias_name = f"phoebe_{job["JOBID"]}"
+        ssh_alias_name = f"{alias_prefix}_{job["JOBID"]}"
         ssh_aliases.append(ssh_alias_name)
 
         # check if there is an entry in ~/.ssh/config for this host
@@ -119,7 +122,7 @@ def main():
 
         if stripped.lower().startswith("host "):
             host_name = line.split()[1]
-            if host_name.startswith("phoebe_") and host_name not in ssh_aliases:
+            if host_name.startswith(f"{global_prefix}_") and host_name not in ssh_aliases:
                 print(f"Removing entry for {host_name} from {ssh_config_file}")
                 # remove the host block
                 in_host_block = True

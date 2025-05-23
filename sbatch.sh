@@ -27,14 +27,10 @@ MODULES="CUDA/12.4.0"
 
 # USE:
 
-# start this job..
-# get the port number from the job name
-# type: 
-# 
-# ssh phoebecn -p 32768 
-#
-# where 32768 is the port number
-
+# start this job at your cluster, with sbatch sbatch.sh
+# then, from your local machine, run:
+# uv run main.py
+# connect to the cluster with newly created ssh alias.
 
 
 # make sure we have ssh host key for our user instance of SSH:
