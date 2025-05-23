@@ -1,0 +1,3 @@
+ssh_frontends:
+  - name: phoebe
+    host: phoebe.fzu.cz

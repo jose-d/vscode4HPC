@@ -1,0 +1,9 @@
+[project]
+name = "vscode4hpc"
+version = "0.1.0"
+description = "Script checking remote HPC jobs and creating corresponding .ssh/config entries"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6.0.2",
+]
