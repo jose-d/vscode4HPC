@@ -1,5 +1,6 @@
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python
 
+import os
 import subprocess
 import yaml
 
@@ -53,7 +54,8 @@ def load_config(config_path):
 def main():
     print("Hello from vscode4hpc!")
 
-    ssh_config_file = "/home/jose/.ssh/config"
+    homedir=os.path.expanduser("~")
+    ssh_config_file = os.path.join(homedir, ".ssh", "config")
 
     #load config file
     config = load_config("config.yaml")
@@ -99,7 +101,7 @@ def main():
                 file.write("    CheckHostIP no\n")
                 file.write("    StrictHostKeyChecking no\n")
                 file.write("    UserKnownHostsFile /dev/null\n")
-                file.write(f"    ProxyCommand ssh {job['USER']}@{job['frontend']}} \"nc {job["EXEC_HOST"]} {job_port}\"\n")
+                file.write(f"    ProxyCommand ssh {job['USER']}@{job['frontend']} \"nc {job["EXEC_HOST"]} {job_port}\"\n")
                 file.write(f"    Hostname {job["EXEC_HOST"]}\n")
                 file.write(f"    Port {job_port}\n")
 

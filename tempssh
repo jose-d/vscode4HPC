@@ -1,0 +1,220 @@
+# old cisco:
+Host 892FSP
+	HOstname 10.26.210.233
+	ciphers=+aes256-cbc
+	HostKeyAlgorithms=+ssh-rsa
+	PubkeyAcceptedAlgorithms=+ssh-rsa
+	KexAlgorithms=+diffie-hellman-group-exchange-sha1
+	IdentityFile=~/.ssh/id_rsa_2048
+
+
+
+Host phoebecn
+	User jose
+	CheckHostIP no
+	ProxyCommand ssh %r@phoebe.fzu.cz "nc \$(squeue --me --states=R -h --name=s_%p -O NodeList) %p"
+	StrictHostKeyChecking=no
+	UserKnownHostsFile=/dev/null
+
+
+
+#Host alaska
+#	HostName alaska.vprouza.cz
+# User obrok24
+#
+
+
+#Host 172.16.121.*
+#ProxyJump pidc
+
+
+#ost gpu2-koios
+#HostName 1
+
+Host sup200.ad.nudz.cz
+	HostName sup200.ad.nudz.cz
+	User josef.dvoracek
+
+Host ondemand3.koios.lan
+	HostName ondemand3.koios.lan
+	User root
+
+Host 10.147.20.38
+	HostName 10.147.20.38
+	User jose
+
+Host n17.phoebe.lan
+	HostName n17.phoebe.lan
+	User jose
+
+Host cc
+	HostName 10.147.20.38
+	User jose
+	ProxyJump vm1.oracle
+
+
+
+
+Host borg2.phoebe.lan
+	HostName borg2.phoebe.lan
+	User root
+
+Host sup1.ad.nudz.cz
+	HostName sup1.ad.nudz.cz
+	User root
+
+Host gitlab.fzu.cz
+	HostName gitlab.fzu.cz
+	ProxyJump limba
+
+Host wm-licence.fzu.cz
+	HostName wm-licence.fzu.cz
+	ProxyJump limba
+	User root
+
+Host farma
+	HostName ui.farm.particle.cz
+	User dvoracek
+
+Host cvmfs2.phoebe.lan
+	HostName cvmfs2.phoebe.lan
+	User swbuild
+
+Host DEV_slurmserver2.koios.lan
+	HostName slurmserver2.koios.lan
+	User developer
+
+Host ipa1p
+	HostName ipa1.phoebe.lan
+	ProxyJump pve3
+
+Host pidc
+	HostName cc.ddns.dvojo.cz
+	User jose
+
+Host pi4
+	HostName 10.11.0.3
+	User jose
+	ProxyJump vm1.oracle
+
+Host pi3
+	HostName 10.11.0.2
+	User jose
+	ProxyJump vm1.oracle
+
+Host vm1.oracle
+	HostName vm1.oracle.dvojo.cz
+	User opc
+
+
+
+
+
+
+# laptops, local machines, etc:
+Host sup200.ad.nudz.cz
+	HostName sup200.ad.nudz.cz
+	User josef.dvoracek
+
+Host slurmserver2.koios.lan
+	HostName slurmserver2.koios.lan
+	User root
+
+Host repo1.phoebe.dmz
+	HostName repo1.phoebe.dmz
+	User root
+
+Host mon1.phoebe.lan
+	HostName mon1.phoebe.lan
+	User root
+
+Host gpu2.phoebe.lan
+	HostName gpu2.phoebe.lan
+	User jose
+	ProxyJump phoebe.fzu.cz
+	#RemoteCommand bash -c 'source /etc/profile; sleep 5'
+
+Host phoebe.fzu.cz
+	HostName phoebe.fzu.cz
+	User jose
+
+Host a285
+	HostName 10.26.210.249
+	User jose
+
+Host turris
+	HostName turris.dvojo.cz
+	User root
+
+#Host pi4
+#	HostName 192.168.1.208
+#	User pi
+#	ProxyJump turris
+
+# FZU
+
+Host ceicowiki
+  HostName ceicowiki.fzu.cz
+  User ceicowiki
+  ProxyJump limba
+
+Host symacc
+  HostName webuser.fzu.cz
+  User symacc
+  ProxyJump limba
+
+Host limba
+	HostName limba.fzu.cz
+        User jose
+        ForwardX11 yes
+        PasswordAuthentication no
+
+# FZU.koios
+Host koios1-limba
+	HostName 172.16.120.1
+	User root
+
+Host koios1-jose
+	HostName koios1.fzu.cz
+	User jose
+	ProxyJump limba
+	Port 22
+	ForwardX11 yes
+	PasswordAuthentication no
+
+Host ood1
+        HostName ood1
+        User root
+	ProxyJump koios1-limba
+
+Host ood2
+        HostName ood2
+        User root
+        ProxyJump koios1-limba
+
+# FZU.phoebe
+
+# use root instead of jose
+Match Host gpu*
+  User root
+Match Host ipa*
+  User root
+Match Host st*
+  User root
+Match Host hv*
+	User root
+Match host pve*
+	User root
+
+Match host 10.26.210.233
+	KexAlgorithms=+diffie-hellman-group1-sha1
+
+Host phoebe_3206063
+    User jose
+    CheckHostIP no
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    ProxyCommand ssh jose@phoebe.fzu.cz "nc gpu1 32768"
+    Hostname gpu1
+    Hostname phoebecn
+    Port s_32768
