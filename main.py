@@ -1,51 +1,78 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import subprocess
 import yaml
 
-def get_running_jobs_from_cluster(frontend:str):
+def generate_ssh_string(host:str, username:str = None):
+    """Generates an SSH connection string."""
+    if username:
+        return f"{username}@{host}"
+    else:
+        return host
+    
+def try_connection_to_slurmd_frontend(ssh_string:str):
+    """Tries to connect to the SLURM frontend of the HPC cluster."""
+    try:
+        # Attempt to run a simple command on the remote host
+        result = subprocess.run(["ssh", ssh_string, "scontrol ping"], capture_output=True, text=True, check=True)
+        if "UP" in result.stdout:
+            print(f"✅ Connection to {ssh_string} successful.")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Connection failed: {e}")
+        return False
+
+def get_running_jobs_from_cluster(frontend:str, username:str = None):
     """connects to frontend of HPC cluster using ssh and gets the list of running jobs"""
     # ssh to the frontend
     # get the list of running jobs
 
-    command = "squeue --me --format=%all"  # example command to list jobs (for SLURM clusters)
+    frontend = generate_ssh_string(frontend, username)
 
-    ssh_command = ["ssh", f"{frontend}", command]
+    if not try_connection_to_slurmd_frontend(frontend):
+        print(f"❌ Failed to connect to {frontend}. Please check your SSH configuration for frontend {frontend}.")
+        print("Exiting...")
+        sys.exit(1)
 
     jobs = []
+    command = "squeue --me --format=%all"  # example command to list jobs (for SLURM clusters)
+    ssh_command = ["ssh", f"{frontend}", command]
 
     try:
         # Execute the SSH command
-        #print("Executing command:", ssh_command)
         result = subprocess.run(ssh_command, capture_output=True, text=True, check=True)
         jobs_output = result.stdout
-
-        # returns something like:
-        # ACCOUNT|TRES_PER_NODE|MIN_CPUS|MIN_TMP_DISK|END_TIME|FEATURES|GROUP|OVER_SUBSCRIBE|JOBID|NAME|COMMENT|TIME_LIMIT|MIN_MEMORY|REQ_NODES|COMMAND|PRIORITY|QOS|REASON|ST|USER|RESERVATION|WCKEY|EXC_NODES|NICE|S:C:T|JOBID|EXEC_HOST|CPUS|NODES|DEPENDENCY|ARRAY_JOB_ID|GROUP|SOCKETS_PER_NODE|CORES_PER_SOCKET|THREADS_PER_CORE|ARRAY_TASK_ID|TIME_LEFT|TIME|NODELIST|CONTIGUOUS|PARTITION|PRIORITY|NODELIST(REASON)|START_TIME|STATE|UID|SUBMIT_TIME|LICENSES|CORE_SPEC|SCHEDNODES|WORK_DIR
-        # fzu_a_39|N/A|8|0|2025-05-23T03:41:42|(null)|jose|OK|3205536|s_32770|p_32770|12:00:00|32G||/home/jose/projects/nvidia_container_apptainer/sbatch.sh|0.00000291038305|max400cpu|None|R|jose|(null)|(null)||0|*:*:*|3205536|gpu1|8|1|(null)|3205536|30012|*|*|*|N/A|11:40:14|19:46|gpu1|0|gpu_int|12500|gpu1|2025-05-22T15:41:42|RUNNING|30012|2025-05-22T15:41:38|(null)|N/A|(null)|/home/jose/projects/nvidia_container_apptainer
-        # fzu_a_39|N/A|8|0|2025-05-23T03:38:01|(null)|jose|OK|3205535|s_32769|p_32769|12:00:00|32G||/home/jose/projects/nvidia_container_apptainer/sbatch.sh|0.00000291038305|max400cpu|None|R|jose|(null)|(null)||0|*:*:*|3205535|gpu1|8|1|(null)|3205535|30012|*|*|*|N/A|11:36:33|23:27|gpu1|0|gpu_int|12500|gpu1|2025-05-22T15:38:01|RUNNING|30012|2025-05-22T15:38:01|(null)|N/A|(null)|/home/jose/projects/nvidia_container_apptainer
+        rc = result.returncode
+        if rc != 0:
+            raise subprocess.CalledProcessError(rc, ssh_command, output=jobs_output)
 
         # parse the output to get list of dicts:
+        lines = jobs_output.splitlines()
+        if not lines:
+            return jobs
 
-        keys = jobs_output.splitlines()[0].split("|")
-
-        for line in jobs_output.splitlines()[1:]:
+        keys = lines[0].split("|")
+        for line in lines[1:]:
+            if not line.strip():
+                continue
             values = line.split("|")
-            job = {}
-            for i, key in enumerate(keys):
-                job[key] = values[i]
+            if len(values) != len(keys):
+                continue  # skip malformed lines
+            job = {key: value for key, value in zip(keys, values)}
             job["frontend"] = frontend
             jobs.append(job)
 
     except subprocess.CalledProcessError as e:
-        jobs_output = f"Error: {e}"
+        # print error if SSH command fails
+        print(f"Error executing SSH command: {e}")
         
     return jobs
 
 
 
-def load_config(config_path):
+def load_config(config_path:str):
     """Loads a YAML configuration file."""
     with open(config_path, 'r', encoding='utf-8') as file:
         return yaml.safe_load(file)
@@ -59,15 +86,20 @@ def main():
 
     #load config file
     config = load_config("config.yaml")
-    print("Loaded config:", config)
+    print(f"ℹ️ Config loaded with {len(config['ssh_frontends'])} frontends.")
 
     # get the frontend from the config
     jobs_output = []
     for frontend in config["ssh_frontends"]:
-        print("Frontend:", frontend)
+        print(f"ℹ️ Connecting to frontend: {frontend['name']}")
         # get the running jobs from the cluster
-        jobs_output.extend(get_running_jobs_from_cluster(frontend['host']))
-        print("Running jobs count", len(jobs_output))
+        from_this_frontend = get_running_jobs_from_cluster(frontend['host'],frontend['username'])
+        jobs_output.extend(from_this_frontend)
+        if len(from_this_frontend) == 0:
+            status_char = "ℹ️"
+        else:
+            status_char = "🟢"
+        print(f"{status_char} Running jobs count {len(from_this_frontend)}" )
     
     # for every job, ensure there is corresponding entry in ~/.ssh/config
 
@@ -76,7 +108,7 @@ def main():
 
     for job in jobs_output:
 
-        print("checking job:", job["JOBID"])
+        print("👷 checking job:", job["JOBID"])
 
         job_name = job["NAME"]
 
@@ -97,7 +129,7 @@ def main():
             ssh_config = file.read()
 
         if f"Host {ssh_alias_name}" not in ssh_config:
-            print(f"Adding entry for {job["JOBID"]} to {ssh_config_file} as {ssh_alias_name} at port {job_port}")
+            print(f"▶️ Adding entry for {job["JOBID"]} to {ssh_config_file} as {ssh_alias_name} at port {job_port}")
             with open(ssh_config_file, 'a', encoding='utf-8') as file:
                 file.write(f"\nHost {ssh_alias_name}\n")
                 file.write(f"    User {job['USER']}\n")
@@ -107,6 +139,8 @@ def main():
                 file.write(f"    ProxyCommand ssh {job['USER']}@{job['frontend']} \"nc {job["EXEC_HOST"]} {job_port}\"\n")
                 file.write(f"    Hostname {job["EXEC_HOST"]}\n")
                 file.write(f"    Port {job_port}\n")
+        else:
+            print(f"ℹ️ Entry for {job["JOBID"]} already exists in {ssh_config_file} as {ssh_alias_name}")
 
     # make sure there are no hanging aliases in ~/.ssh/config
     with open(ssh_config_file, 'r', encoding='utf-8') as file:
@@ -123,7 +157,7 @@ def main():
         if stripped.lower().startswith("host "):
             host_name = line.split()[1]
             if host_name.startswith(f"{global_prefix}_") and host_name not in ssh_aliases:
-                print(f"Removing entry for {host_name} from {ssh_config_file}")
+                print(f"⏹️ Removing entry for {host_name} from {ssh_config_file}")
                 # remove the host block
                 in_host_block = True
                 old_host_block = True
