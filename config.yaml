@@ -1,3 +1,7 @@
 ssh_frontends:
   - name: phoebe
     host: phoebe.fzu.cz
+    username: jose
+  - name: koios
+    host: koios1.fzu.cz
+    username: jose
